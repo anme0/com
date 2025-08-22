@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eye on Eyes</title>
     <!-- Link to the separate manifest.json file -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/com/manifest.json">
     <link rel="apple-touch-icon" href="https://placehold.co/192x192/1f2937/d1d5db?text=Eye">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,7 +41,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 // Register the separate sw.js file
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('/com/sw.js')
                     .then(registration => {
                         console.log('Service Worker registered! Scope:', registration.scope);
                     })
