@@ -1,291 +1,61 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eye on Eyes</title>
-    <!-- Link to the manifest.json file -->
-    <link rel="manifest" href="/com/manifest.json">
-    <!-- Updated path for the apple-touch-icon -->
-    <link rel="apple-touch-icon" href="/com/IMG-20250821-WA0012.jpg">
-    <!-- Tailwind CSS CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Custom styles to match the Android app's faded blue */
-        .faded-blue {
-            background-color: #D0E6F7;
-        }
-        /* Style for the range slider */
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 25px;
-            height: 25px;
-            background: #3b82f6;
-            cursor: pointer;
-            border-radius: 50%;
-            border: 2px solid #fff;
-        }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen p-4 bg-gray-100">
+// Define the name of the cache and the list of files to cache
+const CACHE_NAME = 'eye-on-eyes-v1';
+const urlsToCache = [
+    '/com/', // The root path, which should serve index.html
+    '/com/index.html',
+    '/com/manifest.json',
+    '/com/IMG-20250821-WA0012.jpg'
+];
 
-    <!-- Main container replicating the Android app's layout -->
-    <div class="faded-blue shadow-xl rounded-2xl w-full max-w-sm p-6 flex flex-col items-center">
+// The `install` event is fired when the service worker is first installed.
+// We use this to cache the essential files for offline use.
+self.addEventListener('install', (event) => {
+    // Perform the installation steps.
+    event.waitUntil(
+        // Open a cache named `eye-on-eyes-v1`.
+        caches.open(CACHE_NAME)
+            .then((cache) => {
+                console.log('Service Worker: Caching all assets');
+                // Add all the specified URLs to the cache.
+                return cache.addAll(urlsToCache);
+            })
+            .catch(error => {
+                console.error('Service Worker: Failed to cache assets', error);
+            })
+    );
+});
 
-        <!-- Header -->
-        <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Eye on Eyes</h1>
-        <p class="text-gray-600 text-center mb-6 text-sm italic font-medium">
-            Your eyes power your vision—nurture their health,<br>and let focus and color guide every glance.
-        </p>
-
-        <!-- Timer and Controls Section -->
-        <div class="flex flex-col items-center w-full">
-            <div class="w-full mb-6">
-                <div class="flex justify-between items-center px-2">
-                    <span id="duration-display" class="text-lg font-semibold text-gray-700">Duration: 20 min</span>
-                </div>
-                <!-- Slider to select duration -->
-                <input type="range" id="duration-slider" min="0" max="10" value="3" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer">
-            </div>
-
-            <!-- Timer Display -->
-            <div class="bg-white tonal-elevation-2 rounded-xl p-4 mb-6 shadow-md">
-                <span id="timer-display" class="text-5xl font-bold text-gray-800">20:00</span>
-            </div>
-            
-            <!-- Restart Button -->
-            <button id="restart-button" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
-                Restart Eye Timer
-            </button>
-        </div>
-
-        <!-- ON/OFF Switch -->
-        <div class="flex items-center mt-6 p-4 bg-gray-100 rounded-xl w-full justify-center shadow-inner">
-            <span class="text-lg font-semibold text-gray-700 mr-4">Timer ON/OFF</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="timer-switch" class="sr-only peer" checked>
-                <div class="w-14 h-8 bg-gray-400 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
-        </div>
-
-        <!-- Pop-up Modal (hidden by default) -->
-        <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
-            <div class="bg-white rounded-2xl p-6 text-center faded-blue shadow-lg">
-                <div class="bg-white rounded-xl p-4 mb-4">
-                    <h2 class="text-3xl font-bold leading-tight">Eye Break<br>Reminder</h2>
-                </div>
-                <p class="text-xl font-semibold leading-tight mb-6">Look 20 feet away<br>for 20 seconds!</p>
-                <button id="modal-ok-button" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
-                    OK
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- JavaScript logic -->
-    <script>
-        // DOM element references
-        const timerDisplay = document.getElementById('timer-display');
-        const durationSlider = document.getElementById('duration-slider');
-        const durationDisplay = document.getElementById('duration-display');
-        const timerSwitch = document.getElementById('timer-switch');
-        const restartButton = document.getElementById('restart-button');
-        const modalContainer = document.getElementById('modal-container');
-        const modalOkButton = document.getElementById('modal-ok-button');
-
-        // State variables
-        const minuteOptions = [1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75]; // Increased options for better slider range
-        let selectedMinutes = 20;
-        let timeLeft = selectedMinutes * 60;
-        let timerInterval;
-        let lastUpdateTime;
-        let isTimerActive = false;
-        
-        // Function to format time in MM:SS
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = Math.floor(seconds % 60);
-            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-        }
-
-        // Function to start the timer
-        function startTimer() {
-            if (!isTimerActive) {
-                lastUpdateTime = Date.now();
-                isTimerActive = true;
-                timerInterval = setInterval(() => {
-                    const now = Date.now();
-                    const elapsedTime = (now - lastUpdateTime) / 1000;
-                    timeLeft -= elapsedTime;
-                    lastUpdateTime = now;
-
-                    if (timeLeft <= 0) {
-                        stopTimer();
-                        timeLeft = 0; // Ensure timer doesn't go negative
-                        timerDisplay.textContent = formatTime(timeLeft);
-                        showModal();
-                        showNotification();
-                    } else {
-                        timerDisplay.textContent = formatTime(timeLeft);
-                    }
-                }, 1000);
-            }
-        }
-
-        // Function to stop the timer
-        function stopTimer() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            isTimerActive = false;
-        }
-
-        // Function to show the completion modal
-        function showModal() {
-            modalContainer.classList.remove('hidden');
-        }
-
-        // Function to hide the modal and restart the timer
-        function hideModal() {
-            modalContainer.classList.add('hidden');
-            timeLeft = selectedMinutes * 60;
-            timerDisplay.textContent = formatTime(timeLeft);
-            if (timerSwitch.checked) {
-                startTimer();
-            }
-        }
-
-        // Function to show a notification when the timer is done
-        function showNotification() {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                const options = {
-                    body: "Look 20 feet away for 20 seconds!",
-                    icon: "/com/IMG-20250821-WA0012.jpg"
-                };
-                new Notification("Eye Break Reminder", options);
-                vibratePhone();
-            } else if ('Notification' in window && Notification.permission !== 'denied') {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        showNotification();
-                    }
-                });
-            }
-        }
-        
-        // Vibrate the phone when the notification is shown
-        function vibratePhone() {
-            if ("vibrate" in navigator) {
-                navigator.vibrate(500); // Vibrate for 500ms
-            }
-        }
-
-        // --- Event Listeners ---
-
-        // Slider change listener
-        durationSlider.addEventListener('input', (event) => {
-            const sliderValue = parseInt(event.target.value, 10);
-            selectedMinutes = minuteOptions[sliderValue];
-            durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
-            
-            // Save the selected duration to local storage
-            localStorage.setItem('eyeTimerDuration', selectedMinutes);
-            
-            // Reset the timer to the new duration
-            timeLeft = selectedMinutes * 60;
-            timerDisplay.textContent = formatTime(timeLeft);
-            stopTimer(); // Stop the timer when the duration is changed
-            if (timerSwitch.checked) {
-                startTimer(); // Restart with new duration
-            }
-        });
-
-        // Timer ON/OFF switch
-        timerSwitch.addEventListener('change', () => {
-            if (timerSwitch.checked) {
-                startTimer();
-            } else {
-                stopTimer();
-            }
-        });
-
-        // Restart button
-        restartButton.addEventListener('click', () => {
-            stopTimer();
-            timeLeft = selectedMinutes * 60;
-            timerDisplay.textContent = formatTime(timeLeft);
-            if (timerSwitch.checked) {
-                startTimer();
-            }
-        });
-
-        // OK button in the modal
-        modalOkButton.addEventListener('click', () => {
-            hideModal();
-        });
-        
-        // Handle visibility change (now only for re-syncing the timer)
-        // Note: The timer now continues to run in the background, but this helps
-        // it to catch up if the browser's background timers are throttled.
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                if (timerSwitch.checked && !isTimerActive) {
-                    // Recalculate time left based on the last known state
-                    const lastKnownTime = localStorage.getItem('eyeTimerTime');
-                    if (lastKnownTime) {
-                         const timeInBackground = (Date.now() - parseInt(localStorage.getItem('eyeTimerLastUpdate'))) / 1000;
-                         timeLeft = parseInt(lastKnownTime) - timeInBackground;
-                         if (timeLeft < 0) timeLeft = 0;
-                    }
-
-                    startTimer();
+// The `fetch` event is fired for every network request.
+// We intercept these requests and serve from the cache first if the resource is available.
+self.addEventListener('fetch', (event) => {
+    // Respond with the cached asset if it exists, otherwise fetch from the network.
+    event.respondWith(
+        caches.match(event.request)
+            .then((response) => {
+                // If a match is found in the cache, return it.
+                if (response) {
+                    return response;
                 }
-            } else {
-                // When the screen "turns off", save the current time and state
-                localStorage.setItem('eyeTimerTime', timeLeft);
-                localStorage.setItem('eyeTimerLastUpdate', Date.now());
-                stopTimer();
-            }
-        });
+                // Otherwise, fetch the resource from the network.
+                return fetch(event.request);
+            })
+    );
+});
 
-        // Initialize the app state on page load
-        window.addEventListener('load', () => {
-            // Load the saved duration from local storage, or use a default
-            const savedDuration = localStorage.getItem('eyeTimerDuration');
-            if (savedDuration) {
-                selectedMinutes = parseInt(savedDuration, 10);
-            }
-            
-            // Set initial slider position based on the selected minutes
-            const initialIndex = minuteOptions.indexOf(selectedMinutes);
-            if (initialIndex !== -1) {
-                durationSlider.value = initialIndex;
-            }
-
-            // Set initial timer state
-            timeLeft = selectedMinutes * 60;
-            durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
-            timerDisplay.textContent = formatTime(timeLeft);
-        });
-
-        // Register the Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/com/service-worker.js')
-                    .then(registration => {
-                        console.log('Service Worker registered with scope:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('Service Worker registration failed:', error);
-                    });
-            });
-        }
-    </script>
-</body>
-</html>
+// The `activate` event is fired after the service worker is installed.
+// We use this to clean up old caches.
+self.addEventListener('activate', (event) => {
+    const cacheWhitelist = [CACHE_NAME];
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    // Delete any caches that are not in the whitelist.
+                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
+});
