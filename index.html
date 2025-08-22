@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My First PWA</title>
+    <title>Eye on Eyes</title>
+    <!-- Link to the separate manifest.json file -->
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="https://placehold.co/192x192/1f2937/d1d5db?text=PWA">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/1f2937/d1d5db?text=Eye">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +22,7 @@
 
     <!-- The main application UI -->
     <div class="bg-white shadow-xl rounded-2xl w-full max-w-sm p-6 flex flex-col items-center">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">My PWA</h1>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Eye on Eyes</h1>
         <p class="text-gray-600 text-center mb-6">This is a simple Progressive Web App. Try using it offline!</p>
 
         <!-- A simple status indicator for demonstration -->
@@ -34,11 +35,12 @@
         </button>
     </div>
 
-    <!-- The manifest and service worker script -->
+    <!-- The service worker registration and app logic -->
     <script>
         // Check for Service Worker support and register it
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                // Register the separate sw.js file
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('Service Worker registered! Scope:', registration.scope);
@@ -48,105 +50,6 @@
                     });
             });
         }
-
-        // Add a manifest.json file inline for simplicity
-        const manifestData = {
-            "name": "My PWA",
-            "short_name": "MyPWA",
-            "description": "A simple demo PWA.",
-            "lang": "en-US",
-            "start_url": "/",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#3b82f6",
-            "icons": [
-                {
-                    "src": "https://placehold.co/192x192/1f2937/d1d5db?text=PWA",
-                    "sizes": "192x192",
-                    "type": "image/png"
-                },
-                {
-                    "src": "https://placehold.co/512x512/1f2937/d1d5db?text=PWA",
-                    "sizes": "512x512",
-                    "type": "image/png"
-                }
-            ]
-        };
-
-        const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-        const manifestUrl = URL.createObjectURL(manifestBlob);
-        const manifestLink = document.querySelector('link[rel="manifest"]');
-        manifestLink.href = manifestUrl;
-
-        // Service Worker Logic
-        // This script will be served as /sw.js by the server, but for this demo, we can simulate its content.
-        const swContent = `
-            const CACHE_NAME = 'my-pwa-cache-v1';
-            const urlsToCache = [
-                '/',
-                '/index.html',
-                'https://cdn.tailwindcss.com',
-                'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
-                'https://fonts.gstatic.com',
-                'https://placehold.co/192x192/1f2937/d1d5db?text=PWA',
-                'https://placehold.co/512x512/1f2937/d1d5db?text=PWA',
-            ];
-
-            // Installation: Cache all static assets
-            self.addEventListener('install', event => {
-                event.waitUntil(
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            console.log('Opened cache');
-                            return cache.addAll(urlsToCache);
-                        })
-                );
-            });
-
-            // Fetch: Serve from cache first, then fall back to network
-            self.addEventListener('fetch', event => {
-                event.respondWith(
-                    caches.match(event.request)
-                        .then(response => {
-                            // Cache hit - return the response
-                            if (response) {
-                                return response;
-                            }
-                            // No cache hit - fetch from network
-                            return fetch(event.request);
-                        })
-                );
-            });
-
-            // Activation: Clean up old caches
-            self.addEventListener('activate', event => {
-                const cacheWhitelist = [CACHE_NAME];
-                event.waitUntil(
-                    caches.keys().then(cacheNames => {
-                        return Promise.all(
-                            cacheNames.map(cacheName => {
-                                if (cacheWhitelist.indexOf(cacheName) === -1) {
-                                    return caches.delete(cacheName);
-                                }
-                            })
-                        );
-                    })
-                );
-            });
-        `;
-
-        // We can't serve a separate file, so we'll create a blob URL to simulate /sw.js
-        const swBlob = new Blob([swContent], { type: 'application/javascript' });
-        const swUrl = URL.createObjectURL(swBlob);
-
-        // Override the service worker registration to use our blob URL
-        const originalRegister = navigator.serviceWorker.register;
-        navigator.serviceWorker.register = (url, options) => {
-            if (url === '/sw.js') {
-                return originalRegister(swUrl, options);
-            }
-            return originalRegister(url, options);
-        };
 
         // Handle network status
         const statusMessage = document.getElementById('status-message');
@@ -197,7 +100,6 @@
         window.addEventListener('appinstalled', (e) => {
             console.log('PWA was installed');
         });
-
     </script>
 </body>
 </html>
