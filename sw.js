@@ -6,8 +6,7 @@ const urlsToCache = [
     'https://cdn.tailwindcss.com',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
     'https://fonts.gstatic.com',
-    'https://placehold.co/192x192/1f2937/d1d5db?text=Eye',
-    'https://placehold.co/512x512/1f2937/d1d5db?text=Eye',
+    '/com/IMG-20250821-WA0012.jpg'
 ];
 
 // Installation: Cache all static assets
