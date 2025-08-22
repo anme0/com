@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eye on Eyes</title>
-    <!-- Link to the separate manifest.json file -->
-    <link rel="manifest" href="/com/manifest.json">
-    <!-- Updated path for the apple-touch-icon -->
-    <link rel="apple-touch-icon" href="/com/IMG-20250821-WA0012.jpg">
+    <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,91 +12,188 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+        }
+        /* Custom styles to match the Android app's faded blue */
+        .faded-blue {
+            background-color: #D0E6F7;
+        }
+        /* Style for the range slider */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #fff;
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="flex items-center justify-center min-h-screen p-4 bg-gray-100">
 
-    <!-- The main application UI -->
-    <div class="bg-white shadow-xl rounded-2xl w-full max-w-sm p-6 flex flex-col items-center">
+    <!-- Main container replicating the Android app's layout -->
+    <div class="faded-blue shadow-xl rounded-2xl w-full max-w-sm p-6 flex flex-col items-center">
+
+        <!-- Header -->
         <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Eye on Eyes</h1>
-        <p class="text-gray-600 text-center mb-6">This is a simple Progressive Web App. Try using it offline!</p>
+        <p class="text-gray-600 text-center mb-6 text-sm italic font-medium">
+            Your eyes power your vision—nurture their health,<br>and let focus and color guide every glance.
+        </p>
 
-        <!-- A simple status indicator for demonstration -->
-        <div id="status-container" class="bg-gray-100 rounded-lg p-4 w-full mb-6 text-center">
-            <p id="status-message" class="text-sm font-semibold text-gray-700">Checking network status...</p>
+        <!-- Timer and Controls Section -->
+        <div class="flex flex-col items-center w-full">
+            <div class="w-full mb-6">
+                <div class="flex justify-between items-center px-2">
+                    <span id="duration-display" class="text-lg font-semibold text-gray-700">Duration: 20 min</span>
+                </div>
+                <!-- Slider to select duration -->
+                <input type="range" id="duration-slider" min="0" max="10" value="3" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <!-- Timer Display -->
+            <div class="bg-white tonal-elevation-2 rounded-xl p-4 mb-6 shadow-md">
+                <span id="timer-display" class="text-5xl font-bold text-gray-800">20:00</span>
+            </div>
+            
+            <!-- Restart Button -->
+            <button id="restart-button" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
+                Restart Eye Timer
+            </button>
         </div>
 
-        <button id="add-to-home" class="hidden bg-blue-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
-            Install App
-        </button>
+        <!-- ON/OFF Switch -->
+        <div class="flex items-center mt-6 p-4 bg-gray-100 rounded-xl w-full justify-center shadow-inner">
+            <span class="text-lg font-semibold text-gray-700 mr-4">Timer ON/OFF</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="timer-switch" class="sr-only peer" checked>
+                <div class="w-14 h-8 bg-gray-400 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+        </div>
+
+        <!-- Pop-up Modal (hidden by default) -->
+        <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl p-6 text-center faded-blue shadow-lg">
+                <div class="bg-white rounded-xl p-4 mb-4">
+                    <h2 class="text-3xl font-bold leading-tight">Eye Break<br>Reminder</h2>
+                </div>
+                <p class="text-xl font-semibold leading-tight mb-6">Look 20 feet away<br>for 20 seconds!</p>
+                <button id="modal-ok-button" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
+                    OK
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- The service worker registration and app logic -->
+    <!-- JavaScript logic -->
     <script>
-        // Check for Service Worker support and register it
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Register the separate sw.js file
-                navigator.serviceWorker.register('/com/sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registered! Scope:', registration.scope);
-                    })
-                    .catch(err => {
-                        console.log('Service Worker registration failed:', err);
-                    });
-            });
+        // DOM element references
+        const timerDisplay = document.getElementById('timer-display');
+        const durationSlider = document.getElementById('duration-slider');
+        const durationDisplay = document.getElementById('duration-display');
+        const timerSwitch = document.getElementById('timer-switch');
+        const restartButton = document.getElementById('restart-button');
+        const modalContainer = document.getElementById('modal-container');
+        const modalOkButton = document.getElementById('modal-ok-button');
+
+        // State variables
+        const minuteOptions = [1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75]; // Increased options for better slider range
+        let selectedMinutes = 20;
+        let timeLeft = selectedMinutes * 60;
+        let timerInterval;
+
+        // Function to format time in MM:SS
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
         }
 
-        // Handle network status
-        const statusMessage = document.getElementById('status-message');
-        const updateStatus = () => {
-            if (navigator.onLine) {
-                statusMessage.textContent = 'You are online.';
-                statusMessage.classList.remove('text-red-600');
-                statusMessage.classList.add('text-green-600');
+        // Function to start the timer
+        function startTimer() {
+            if (!timerInterval) {
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft < 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        timeLeft = 0; // Ensure timer doesn't go negative
+                        timerDisplay.textContent = formatTime(timeLeft);
+                        showModal();
+                    } else {
+                        timerDisplay.textContent = formatTime(timeLeft);
+                    }
+                }, 1000);
+            }
+        }
+
+        // Function to stop the timer
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        // Function to show the completion modal
+        function showModal() {
+            modalContainer.classList.remove('hidden');
+        }
+
+        // Function to hide the modal and restart the timer
+        function hideModal() {
+            modalContainer.classList.add('hidden');
+            timeLeft = selectedMinutes * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+            if (timerSwitch.checked) {
+                startTimer();
+            }
+        }
+
+        // --- Event Listeners ---
+
+        // Slider change listener
+        durationSlider.addEventListener('input', (event) => {
+            const sliderValue = parseInt(event.target.value, 10);
+            selectedMinutes = minuteOptions[sliderValue];
+            durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
+            
+            // Reset the timer to the new duration
+            timeLeft = selectedMinutes * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+        });
+
+        // Timer ON/OFF switch
+        timerSwitch.addEventListener('change', () => {
+            if (timerSwitch.checked) {
+                startTimer();
             } else {
-                statusMessage.textContent = 'You are offline!';
-                statusMessage.classList.remove('text-green-600');
-                statusMessage.classList.add('text-red-600');
-            }
-        };
-
-        window.addEventListener('online', updateStatus);
-        window.addEventListener('offline', updateStatus);
-        updateStatus();
-
-        // Handle the beforeinstallprompt event to show a custom install button
-        let deferredPrompt;
-        const installButton = document.getElementById('add-to-home');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent the mini-infobar from appearing on mobile
-            e.preventDefault();
-            // Stash the event so it can be triggered later
-            deferredPrompt = e;
-            // Show the install button
-            installButton.classList.remove('hidden');
-        });
-
-        installButton.addEventListener('click', async () => {
-            // Hide the button
-            installButton.classList.add('hidden');
-            // Show the install prompt
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                // Wait for the user to respond to the prompt
-                const { outcome } = await deferredPrompt.userChoice;
-                // We've used the prompt, so clear the deferredPrompt variable
-                deferredPrompt = null;
-                console.log(`User response to the install prompt: ${outcome}`);
+                stopTimer();
             }
         });
 
-        // Listen for the appinstalled event
-        window.addEventListener('appinstalled', (e) => {
-            console.log('PWA was installed');
+        // Restart button
+        restartButton.addEventListener('click', () => {
+            stopTimer();
+            timeLeft = selectedMinutes * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+            if (timerSwitch.checked) {
+                startTimer();
+            }
+        });
+
+        // OK button in the modal
+        modalOkButton.addEventListener('click', () => {
+            hideModal();
+        });
+
+        // Initialize the app state
+        window.addEventListener('load', () => {
+            // Set initial slider position based on default minutes (20 min)
+            const initialIndex = minuteOptions.indexOf(20);
+            durationSlider.value = initialIndex;
+            durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
+
+            // Start the timer by default
+            startTimer();
         });
     </script>
 </body>
