@@ -1,21 +1,21 @@
 {
     "name": "Eye on Eyes",
     "short_name": "Eye on Eyes",
-    "start_url": "/com/index.html",
+    "description": "A timer to remind you to take a break from your screen.",
+    "start_url": "/com/",
     "display": "standalone",
     "background_color": "#D0E6F7",
     "theme_color": "#3b82f6",
-    "description": "An app to remind you to take a 20-20-20 eye break.",
     "icons": [
         {
             "src": "/com/IMG-20250821-WA0012.jpg",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/jpeg"
         },
         {
             "src": "/com/IMG-20250821-WA0012.jpg",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/jpeg"
         }
     ]
 }
