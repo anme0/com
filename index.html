@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eye on Eyes</title>
+    <!-- Link to the manifest.json file -->
+    <link rel="manifest" href="/com/manifest.json">
+    <!-- Updated path for the apple-touch-icon -->
+    <link rel="apple-touch-icon" href="/com/IMG-20250821-WA0012.jpg">
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,25 +105,33 @@
         let selectedMinutes = 20;
         let timeLeft = selectedMinutes * 60;
         let timerInterval;
-
+        let lastUpdateTime;
+        let isTimerActive = false;
+        
         // Function to format time in MM:SS
         function formatTime(seconds) {
             const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
+            const remainingSeconds = Math.floor(seconds % 60);
             return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
         }
 
         // Function to start the timer
         function startTimer() {
-            if (!timerInterval) {
+            if (!isTimerActive) {
+                lastUpdateTime = Date.now();
+                isTimerActive = true;
                 timerInterval = setInterval(() => {
-                    timeLeft--;
-                    if (timeLeft < 0) {
-                        clearInterval(timerInterval);
-                        timerInterval = null;
+                    const now = Date.now();
+                    const elapsedTime = (now - lastUpdateTime) / 1000;
+                    timeLeft -= elapsedTime;
+                    lastUpdateTime = now;
+
+                    if (timeLeft <= 0) {
+                        stopTimer();
                         timeLeft = 0; // Ensure timer doesn't go negative
                         timerDisplay.textContent = formatTime(timeLeft);
                         showModal();
+                        showNotification();
                     } else {
                         timerDisplay.textContent = formatTime(timeLeft);
                     }
@@ -131,6 +143,7 @@
         function stopTimer() {
             clearInterval(timerInterval);
             timerInterval = null;
+            isTimerActive = false;
         }
 
         // Function to show the completion modal
@@ -148,6 +161,31 @@
             }
         }
 
+        // Function to show a notification when the timer is done
+        function showNotification() {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const options = {
+                    body: "Look 20 feet away for 20 seconds!",
+                    icon: "/com/IMG-20250821-WA0012.jpg"
+                };
+                new Notification("Eye Break Reminder", options);
+                vibratePhone();
+            } else if ('Notification' in window && Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        showNotification();
+                    }
+                });
+            }
+        }
+        
+        // Vibrate the phone when the notification is shown
+        function vibratePhone() {
+            if ("vibrate" in navigator) {
+                navigator.vibrate(500); // Vibrate for 500ms
+            }
+        }
+
         // --- Event Listeners ---
 
         // Slider change listener
@@ -156,9 +194,16 @@
             selectedMinutes = minuteOptions[sliderValue];
             durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
             
+            // Save the selected duration to local storage
+            localStorage.setItem('eyeTimerDuration', selectedMinutes);
+            
             // Reset the timer to the new duration
             timeLeft = selectedMinutes * 60;
             timerDisplay.textContent = formatTime(timeLeft);
+            stopTimer(); // Stop the timer when the duration is changed
+            if (timerSwitch.checked) {
+                startTimer(); // Restart with new duration
+            }
         });
 
         // Timer ON/OFF switch
@@ -184,17 +229,63 @@
         modalOkButton.addEventListener('click', () => {
             hideModal();
         });
+        
+        // Handle visibility change (now only for re-syncing the timer)
+        // Note: The timer now continues to run in the background, but this helps
+        // it to catch up if the browser's background timers are throttled.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (timerSwitch.checked && !isTimerActive) {
+                    // Recalculate time left based on the last known state
+                    const lastKnownTime = localStorage.getItem('eyeTimerTime');
+                    if (lastKnownTime) {
+                         const timeInBackground = (Date.now() - parseInt(localStorage.getItem('eyeTimerLastUpdate'))) / 1000;
+                         timeLeft = parseInt(lastKnownTime) - timeInBackground;
+                         if (timeLeft < 0) timeLeft = 0;
+                    }
 
-        // Initialize the app state
-        window.addEventListener('load', () => {
-            // Set initial slider position based on default minutes (20 min)
-            const initialIndex = minuteOptions.indexOf(20);
-            durationSlider.value = initialIndex;
-            durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
-
-            // Start the timer by default
-            startTimer();
+                    startTimer();
+                }
+            } else {
+                // When the screen "turns off", save the current time and state
+                localStorage.setItem('eyeTimerTime', timeLeft);
+                localStorage.setItem('eyeTimerLastUpdate', Date.now());
+                stopTimer();
+            }
         });
+
+        // Initialize the app state on page load
+        window.addEventListener('load', () => {
+            // Load the saved duration from local storage, or use a default
+            const savedDuration = localStorage.getItem('eyeTimerDuration');
+            if (savedDuration) {
+                selectedMinutes = parseInt(savedDuration, 10);
+            }
+            
+            // Set initial slider position based on the selected minutes
+            const initialIndex = minuteOptions.indexOf(selectedMinutes);
+            if (initialIndex !== -1) {
+                durationSlider.value = initialIndex;
+            }
+
+            // Set initial timer state
+            timeLeft = selectedMinutes * 60;
+            durationDisplay.textContent = `Duration: ${selectedMinutes} min`;
+            timerDisplay.textContent = formatTime(timeLeft);
+        });
+
+        // Register the Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/com/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
